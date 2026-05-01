@@ -39,6 +39,7 @@ jobs:
       - name: Set NDK path
         run: |
           echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
+          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
 
       - name: Build min-gpl for all architectures
         run: |
@@ -56,9 +57,10 @@ jobs:
             --disable-libwebp \
             --disable-tesseract \
             --disable-openssl \
-            min-gpl
+            --enable-gpl
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_ROOT }}
 
       - name: Package AAR
         run: |
