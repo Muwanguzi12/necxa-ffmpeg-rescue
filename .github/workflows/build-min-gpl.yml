@@ -1,0 +1,95 @@
+name: Build FFmpegKit min-gpl AAR
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: # Allows manual triggering from GitHub UI
+
+jobs:
+  build-android-min-gpl:
+    name: Build Android min-gpl AAR
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install Android NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'ndk;25.2.9519653 cmake;3.22.1'
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            autoconf automake libtool curl make g++ unzip \
+            yasm nasm cmake git pkg-config
+
+      - name: Set NDK path
+        run: |
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
+
+      - name: Build min-gpl for all architectures
+        run: |
+          chmod +x android.sh
+          # min-gpl: smallest possible footprint with GPL codecs
+          # Disables heavy codecs (x264, x265, xvid) to keep the AAR under 10MB
+          ./android.sh \
+            --enable-android-media-codec \
+            --enable-android-zlib \
+            --disable-x264 \
+            --disable-x265 \
+            --disable-xvid \
+            --disable-libvpx \
+            --disable-libwebp \
+            --disable-tesseract \
+            --disable-openssl \
+            min-gpl
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+
+      - name: Package AAR
+        run: |
+          mkdir -p output
+          find . -name "*.aar" | xargs -I {} cp {} output/
+          ls -lh output/
+
+      - name: Upload AAR as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-kit-min-gpl-aar
+          path: output/*.aar
+          retention-days: 90
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "FFmpegKit min-gpl ${{ github.ref_name }}"
+          body: |
+            ## 🎉 Lightweight FFmpegKit min-gpl AAR
+
+            Built by the community for the community.
+
+            **Why this exists:** The official `arthenica/ffmpeg-kit` was retired. 
+            These pre-compiled AARs rescue developers from building with the bloated 108MB full-gpl fallback.
+
+            ### Usage
+            Drop the `.aar` into your `android/app/libs/` folder and add to `build.gradle`:
+            ```gradle
+            implementation(files("libs/ffmpeg-kit-min-gpl-6.0.3.aar"))
+            ```
+
+            ---
+            ❤️ Project initiated by **Muwanguzi Samson** — knestars@gmail.com
+          files: output/*.aar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
