@@ -15,6 +15,9 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
+      - name: Clone original ffmpeg-kit
+        run: git clone https://github.com/arthenica/ffmpeg-kit.git source
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -39,6 +42,7 @@ jobs:
 
       - name: Build min-gpl for all architectures
         run: |
+          cd source
           chmod +x android.sh
           # min-gpl: smallest possible footprint with GPL codecs
           # Disables heavy codecs (x264, x265, xvid) to keep the AAR under 10MB
@@ -59,7 +63,7 @@ jobs:
       - name: Package AAR
         run: |
           mkdir -p output
-          find . -name "*.aar" | xargs -I {} cp {} output/
+          find source -name "*.aar" | xargs -I {} cp {} output/
           ls -lh output/
 
       - name: Upload AAR as artifact
