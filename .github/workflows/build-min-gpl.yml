@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch: # Allows manual triggering from GitHub UI
 
+permissions:
+  contents: write
+
 jobs:
   build-android-min-gpl:
     name: Build Android min-gpl AAR
