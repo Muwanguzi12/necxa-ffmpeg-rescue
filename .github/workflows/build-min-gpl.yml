@@ -46,8 +46,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             autoconf automake libtool pkg-config curl git doxygen nasm cmake \
-            gcc g++ gperf texinfo yasm bison autogen wget autopoint meson ninja \
-            ragel groff gtk-doc-tools libtasn1 unzip binutils
+            gcc g++ gperf texinfo yasm bison autogen wget autopoint meson ninja-build \
+            ragel groff gtk-doc-tools libtasn1-6-dev unzip binutils
 
       - name: Fetch pinned maintained FFmpegKit source
         run: |
