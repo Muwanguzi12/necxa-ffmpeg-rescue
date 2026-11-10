@@ -31,25 +31,46 @@ for library in "${NATIVE_LIBS[@]}"; do
   strings "$library" >> "$ALL_STRINGS"
 done
 
+# This is a binary-symbol/string presence check, not proof that a filter
+# successfully processes media. Runtime smoke tests are still required on
+# Android against real sample assets.
 required=(
   libx264
+  fontconfig
+  freetype
+  libass
+  fribidi
   drawtext
   subtitles
   chromakey
   overlay
+  xfade
   amix
   acrossfade
-  xfade
   areverse
   atempo
+  atrim
+  adelay
+  afade
+  aresample
+  aformat
+  alimiter
+  scale
+  crop
+  transpose
+  reverse
+  eq
+  unsharp
+  smartblur
 )
 
 for capability in "${required[@]}"; do
   if ! grep -Fq "$capability" "$ALL_STRINGS"; then
-    echo "FAIL: required FFmpeg capability not found in native libraries: $capability" >&2
+    echo "FAIL: required FFmpeg capability marker not found in native libraries: $capability" >&2
     exit 1
   fi
-  echo "PASS: $capability"
+  echo "PASS: marker $capability"
 done
 
 echo "PASS: AAR contains ${#NATIVE_LIBS[@]} native libraries and arm64-v8a support."
+echo "NOTE: Android media-processing smoke tests are still required."
