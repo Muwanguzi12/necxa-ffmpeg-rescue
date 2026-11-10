@@ -1,11 +1,11 @@
 # 🎬 FFmpegKit Rescue Project
 
-[![Build min-gpl AAR](https://github.com/Muwanguzi12/necxa-ffmpeg-rescue/actions/workflows/build-min-gpl.yml/badge.svg)](https://github.com/Muwanguzi12/necxa-ffmpeg-rescue/actions/workflows/build-min-gpl.yml)
-[![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+[![Build Necxa Studio AAR](https://github.com/Muwanguzi12/necxa-ffmpeg-rescue/actions/workflows/build-min-gpl.yml/badge.svg)](https://github.com/Muwanguzi12/necxa-ffmpeg-rescue/actions/workflows/build-min-gpl.yml)
+[![License: LGPL v3](https://img.shields.io/badge/License-GPL--3.0-red.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![GitHub Release](https://img.shields.io/github/v/release/Muwanguzi12/necxa-ffmpeg-rescue)](https://github.com/Muwanguzi12/necxa-ffmpeg-rescue/releases)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-> **Community rescue fork** — lightweight, pre-compiled `ffmpeg-kit-min-gpl` Android AAR binaries, automatically built via GitHub Actions CI/CD. Free to use, free to contribute.
+> **Independent Android FFmpegKit build project** — creates a reusable, editor-focused AAR through its own GitHub Actions pipeline. The app consumes the released binary; the build project remains separate.
 
 ---
 
@@ -62,18 +62,6 @@ dependencies {
 
 The release also includes `BUILD_INFO.txt` and `SHA256SUMS.txt`. Verify the checksum before replacing the app's current AAR.
 
-### Option B — JitPack (Auto-Resolve)
-```gradle
-// android/build.gradle
-repositories {
-    maven { url 'https://jitpack.io' }
-}
-
-// android/app/build.gradle
-dependencies {
-    implementation 'com.github.Muwanguzi12:necxa-ffmpeg-rescue:v6.0.3'
-}
-```
 
 ---
 
