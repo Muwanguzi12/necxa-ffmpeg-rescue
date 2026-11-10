@@ -22,30 +22,45 @@ This project was created to end that nightmare.
 
 ---
 
-## ✅ What This Project Does
+## What this build contains
 
-This repository uses **GitHub Actions** (free cloud servers) to automatically:
-1. Clone the original FFmpeg + FFmpegKit C++ source code
-2. Compile it using strict `min-gpl` rules (stripping out x264, x265, xvid and other heavy codecs your app doesn't need)
-3. Package the result into a clean, lightweight **~10MB `.aar`** file
-4. Publish it as a **public GitHub Release** so any developer in the world can download it instantly
+The repository builds a **Necxa Studio editor profile** of FFmpegKit for Android. It stays separate from the Necxa Flutter application and publishes a reusable AAR.
 
-**Result: Your APK goes from 108MB back down to ~27MB.**
+The profile is deliberately focused on the operations the media editor actually calls:
+
+| Capability | Native component |
+|---|---|
+| H.264 export used by the editor | `libx264` encoder |
+| Text overlays and imported fonts | FFmpeg `drawtext`, FreeType, Fontconfig |
+| Styled subtitle rendering | `subtitles` filter, libass, FriBidi |
+| Hardware codec integration | Android MediaCodec |
+| Timeline composition | Built-in FFmpeg filters: `overlay`, `chromakey`, `xfade`, `amix`, `acrossfade` |
+| Audio operations | Built-in filters: `areverse`, `atempo`, `aresample` |
+
+The timeline and composition filters are part of FFmpeg itself; they are verified in the resulting native libraries rather than treated as separate external codec packages.
+
+### Build source
+
+The workflow uses the maintained FFmpegKit 6.0 LTS source tree from [ffmpegkit-maintained/ffmpeg](https://github.com/ffmpegkit-maintained/ffmpeg), pinned to a specific commit for reproducible builds. The workflow enables only the external libraries required by this editor profile rather than enabling every optional library.
+
+AAR size depends on the selected libraries and Android ABIs. The previous release artifact was about 36.8 MB, so the old ~10 MB claim was inaccurate and has been removed.
 
 ---
 
 ## 📦 How to Use
 
 ### Option A — Manual (Direct Download)
-1. Go to the [**Releases**](https://github.com/Muwanguzi12/necxa-ffmpeg-rescue/releases) tab.
+1. Open the [**Releases**](https://github.com/Muwanguzi12/necxa-ffmpeg-rescue/releases) tab.
 2. Download `ffmpeg-kit-min-gpl-6.0.3.aar`.
-3. Drop it into your project's `android/app/libs/` folder.
-4. In `android/app/build.gradle`:
-```gradle
+3. Place it in `android/app/libs/`.
+4. Keep the filename exactly as shown because the Necxa app's Gradle configuration references it:
+```kotlin
 dependencies {
     implementation(files("libs/ffmpeg-kit-min-gpl-6.0.3.aar"))
 }
 ```
+
+The release also includes `BUILD_INFO.txt` and `SHA256SUMS.txt`. Verify the checksum before replacing the app's current AAR.
 
 ### Option B — JitPack (Auto-Resolve)
 ```gradle
@@ -99,13 +114,13 @@ If this project saved your build pipeline, reduced your APK size, or just gave y
 
 ---
 
-## 📜 License
+## License and distribution warning
 
-This project inherits the licensing of the original FFmpegKit source code:
-- FFmpeg core: **LGPL v2.1+** (with GPL components enabled under `min-gpl`)
-- FFmpegKit wrapper: **LGPL v3**
+This editor profile enables `--enable-gpl` and the GPL-licensed `x264` encoder. The resulting native package is **GPL-3.0**, not an LGPL-only binary.
 
-See the original [FFmpegKit license](https://github.com/arthenica/ffmpeg-kit/blob/main/LICENSE) for full details.
+Bundling a GPL-3.0 FFmpegKit binary into a distributed application can impose source-distribution and licensing obligations on the combined work. Do not assume a proprietary application can ship this profile unchanged. Review the applicable licenses and obtain qualified legal advice before distributing it.
+
+The FFmpegKit wrapper and each external library retain their own notices. See the upstream source and bundled license files for the exact component terms.
 
 ---
 
