@@ -1,99 +1,134 @@
-name: Build FFmpegKit min-gpl AAR
+name: Build Necxa Studio FFmpegKit AAR
 
 on:
   push:
+    branches:
+      - feature/necxa-studio-editor-profile
     tags:
       - 'v*'
-  workflow_dispatch: # Allows manual triggering from GitHub UI
+  workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: ffmpeg-rescue-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-android-min-gpl:
-    name: Build Android min-gpl AAR
+  build-android-editor:
+    name: Build and verify Necxa editor FFmpeg runtime
     runs-on: ubuntu-22.04
+    timeout-minutes: 360
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      FFMPEGKIT_SOURCE_SHA: c72e151c1ba5bd6ce602a1dfd5eae402095bae86
+      FFMPEGKIT_SOURCE_REPOSITORY: https://github.com/ffmpegkit-maintained/ffmpeg.git
+      ANDROID_NDK_VERSION: 26.2.11394342
 
     steps:
-      - name: Checkout source
+      - name: Checkout Necxa build configuration
         uses: actions/checkout@v4
-
-      - name: Clone original ffmpeg-kit
-        run: git clone https://github.com/arthenica/ffmpeg-kit.git source
 
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
+          distribution: temurin
           java-version: '17'
-          distribution: 'temurin'
 
-      - name: Install Android NDK
+      - name: Set up Android SDK and NDK
         uses: android-actions/setup-android@v3
         with:
-          packages: 'ndk;25.2.9519653 cmake;3.22.1'
+          packages: 'ndk;26.2.11394342 cmake;3.22.1'
 
-      - name: Install build dependencies
+      - name: Install native build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            autoconf automake libtool curl make g++ unzip \
-            yasm nasm cmake git pkg-config
+            autoconf automake libtool pkg-config curl git doxygen nasm cmake \
+            gcc g++ gperf texinfo yasm bison autogen wget autopoint meson ninja-build \
+            ragel groff gtk-doc-tools libtasn1-6-dev unzip binutils
 
-      - name: Set NDK path
+      - name: Fetch pinned maintained FFmpegKit source
         run: |
-          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
-          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
+          git clone --filter=blob:none "$FFMPEGKIT_SOURCE_REPOSITORY" source
+          git -C source checkout --detach "$FFMPEGKIT_SOURCE_SHA"
+          test -f source/android-6.0-lts/android.sh
+          echo "FFmpegKit source: $(git -C source rev-parse HEAD)"
+          echo "FFmpegKit source date: $(git -C source show -s --format=%cI HEAD)"
 
-      - name: Build min-gpl for all architectures
+      - name: Configure Android NDK
         run: |
-          cd source
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/$ANDROID_NDK_VERSION" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/$ANDROID_NDK_VERSION" >> "$GITHUB_ENV"
+
+      - name: Build the Necxa Studio GPL profile
+        working-directory: source/android-6.0-lts
+        run: |
           chmod +x android.sh
-          # min-gpl: smallest possible footprint with GPL codecs
-          # Disables heavy codecs by default. We only enable media-codec, zlib, and gpl.
           ./android.sh \
             --enable-android-media-codec \
             --enable-android-zlib \
-            --enable-gpl
-        env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
-          ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_ROOT }}
-
-      - name: Package AAR
+            --enable-gpl \
+            --enable-x264 \
+            --enable-fontconfig \
+            --enable-libass
+      - name: Package the app-compatible AAR
         run: |
+          set -euo pipefail
           mkdir -p output
-          find source -name "*.aar" | xargs -I {} cp {} output/
-          ls -lh output/
+          AAR="$(find source/android-6.0-lts/prebuilt -type f -name '*.aar' -print -quit)"
+          test -n "$AAR"
+          cp "$AAR" output/ffmpeg-kit-min-gpl-6.0.3.aar
+          unzip -tq output/ffmpeg-kit-min-gpl-6.0.3.aar
+          unzip -l output/ffmpeg-kit-min-gpl-6.0.3.aar | grep -E 'jni/.+\.so$'
+          sha256sum output/ffmpeg-kit-min-gpl-6.0.3.aar > output/SHA256SUMS.txt
+          {
+            echo "profile=necxa-studio-editor-gpl"
+            echo "ffmpegkit_source_repository=$FFMPEGKIT_SOURCE_REPOSITORY"
+            echo "ffmpegkit_source_sha=$FFMPEGKIT_SOURCE_SHA"
+            echo "android_ndk=$ANDROID_NDK_VERSION"
+            echo "enabled_libraries=x264,fontconfig,freetype,fribidi,libass,android-media-codec,zlib"
+            echo "required_builtin_filters=drawtext,subtitles,chromakey,overlay,amix,acrossfade,xfade,areverse,atempo"
+          } > output/BUILD_INFO.txt
 
-      - name: Upload AAR as artifact
+      - name: Verify required editor capabilities in native libraries
+        run: |
+          chmod +x scripts/verify-editor-aar.sh
+          scripts/verify-editor-aar.sh output/ffmpeg-kit-min-gpl-6.0.3.aar
+
+      - name: Upload verified AAR
         uses: actions/upload-artifact@v4
         with:
-          name: ffmpeg-kit-min-gpl-aar
-          path: output/*.aar
+          name: necxa-ffmpeg-studio-${{ github.run_number }}-${{ github.sha }}
+          path: |
+            output/ffmpeg-kit-min-gpl-6.0.3.aar
+            output/BUILD_INFO.txt
+            output/SHA256SUMS.txt
           retention-days: 90
 
-      - name: Create GitHub Release
+      - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          name: "FFmpegKit min-gpl ${{ github.ref_name }}"
+          name: "Necxa Studio FFmpegKit ${{ github.ref_name }}"
           body: |
-            ## 🎉 Lightweight FFmpegKit min-gpl AAR
+            ## Necxa Studio FFmpegKit runtime
 
-            Built by the community for the community.
+            Custom Android FFmpegKit build for Necxa's media editor.
 
-            **Why this exists:** The official `arthenica/ffmpeg-kit` was retired. 
-            These pre-compiled AARs rescue developers from building with the bloated 108MB full-gpl fallback.
+            Included external libraries:
+            - x264 for H.264 encoding
+            - FreeType and Fontconfig for FFmpeg drawtext
+            - FriBidi and libass for styled subtitle rendering
+            - Android MediaCodec and zlib
 
-            ### Usage
-            Drop the `.aar` into your `android/app/libs/` folder and add to `build.gradle`:
-            ```gradle
-            implementation(files("libs/ffmpeg-kit-min-gpl-6.0.3.aar"))
-            ```
+            Built-in filters used by the editor are checked by CI before release.
 
-            ---
-            ❤️ Project initiated by **Muwanguzi Samson** — knestars@gmail.com
-          files: output/*.aar
+            **License:** GPL-3.0 because the build enables GPL and x264. Review GPL obligations before distributing this binary inside an application.
+          files: |
+            output/ffmpeg-kit-min-gpl-6.0.3.aar
+            output/BUILD_INFO.txt
+            output/SHA256SUMS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
