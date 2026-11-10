@@ -73,10 +73,6 @@ jobs:
             --enable-x264 \
             --enable-fontconfig \
             --enable-libass
-        env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
-          ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_ROOT }}
-
       - name: Package the app-compatible AAR
         run: |
           set -euo pipefail
